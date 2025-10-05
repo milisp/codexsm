@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/session_event.schema.json",
+  "title": "SessionEvent (Agent Sessions normalized)",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "kind", "rawJSON"],
+  "properties": {
+    "id": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": ["user", "assistant", "tool_call", "tool_result", "error", "meta"]
+    },
+    "rawJSON": { "type": "string" },
+    "timestamp": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "number" }
+      ],
+      "description": "ISO-8601 string or epoch (seconds/ms/µs)."
+    },
+    "role": { "type": "string" },
+    "text": { "type": "string" },
+    "toolName": { "type": "string" },
+    "toolInput": { "type": "string" },
+    "toolOutput": { "type": "string" },
+    "messageID": { "type": "string" },
+    "parentID": { "type": "string" },
+    "isDelta": { "type": "boolean" },
+    "model": { "type": "string" },
+    "encrypted_content": { "type": "string", "description": "Opaque base64 blob; do not index." }
+  }
+}
+
