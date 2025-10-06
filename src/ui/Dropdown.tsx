@@ -4,12 +4,17 @@ import type { JSX } from "solid-js";
 interface DropdownProps {
   trigger: (props: { ref: (el: HTMLElement) => void; onClick: () => void }) => JSX.Element;
   children: JSX.Element;
+  ref?: (dropdown: { close: () => void }) => void;
 }
 
 const Dropdown = (props: DropdownProps) => {
   const [isOpen, setIsOpen] = createSignal(false);
   let triggerRef: HTMLElement | undefined;
   let contentRef: HTMLElement | undefined;
+
+  if (props.ref) {
+    props.ref({ close: () => setIsOpen(false) });
+  }
 
   const handleClickOutside = (event: MouseEvent) => {
     if (
