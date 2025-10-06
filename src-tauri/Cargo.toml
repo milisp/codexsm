@@ -25,4 +25,7 @@ serde_json = "1"
 walkdir = "2.5.0"
 tauri-plugin-fs = "2"
 dirs = "6.0.0"
+chrono = "0.4"
+toml = "0.9.7"
+base64 = "0.22.1"
 

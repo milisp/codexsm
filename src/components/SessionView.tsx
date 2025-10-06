@@ -1,11 +1,12 @@
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import ScrollButtons from "./ScrollButtons";
-import { readTextFileLines } from "@tauri-apps/plugin-fs";
+import { readTextFileLines, BaseDirectory } from "@tauri-apps/plugin-fs";
 import AgentMessage from "./AgentMessage";
 import RoleMessage from "./RoleMessage";
 import CommandMessage from "./CommandMessage";
 import PlanDisplay, { PlanStatus, SimplePlanStep } from "./PlanDisplay";
-import type { SessionMessage, SessionSummary } from "../types/session";
+import type { SessionMessage, SessionSummary } from "@/types/session";
+import { buildDatedPath } from "@/lib/pathParse";
 
 interface SessionData {
   instructions: string;
@@ -238,11 +239,11 @@ const SessionView = (props: SessionViewProps) => {
   };
 
   const loadSession = async (summary: SessionSummary, options: { force?: boolean } = {}) => {
-    const { key, path, baseDir } = summary;
+    const { session_id, path } = summary;
     const { force = false } = options;
 
     const cache = sessionCache();
-    const cachedSession = cache[key];
+    const cachedSession = cache[session_id];
     if (cachedSession && !force) {
       applySessionData(cachedSession);
       setSessionError(null);
@@ -256,7 +257,8 @@ const SessionView = (props: SessionViewProps) => {
     resetSessionView();
 
     try {
-      const lines = await readTextFileLines(path, { baseDir });
+      const lines = await readTextFileLines(path, {baseDir: BaseDirectory.Home});
+      console.log(lines)
 
       const parsedMessages: SessionMessage[] = [];
       let counter = 0;
@@ -316,7 +318,7 @@ const SessionView = (props: SessionViewProps) => {
       }
 
       applySessionData(sessionData);
-      setSessionCache((prev) => ({ ...prev, [key]: sessionData }));
+      setSessionCache((prev) => ({ ...prev, [session_id]: sessionData }));
     } catch (fsError) {
       console.error("Failed to read session file", fsError);
 

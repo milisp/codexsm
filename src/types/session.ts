@@ -1,11 +1,7 @@
-import { BaseDirectory } from "@tauri-apps/plugin-fs";
-
 export interface SessionSummary {
-  key: string;
+  session_id: string;
   path: string;
-  displayName: string;
-  folder: string;
-  baseDir: BaseDirectory;
+  text: string;
 }
 
 export interface Plan {
