@@ -1,12 +1,12 @@
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import ScrollButtons from "./ScrollButtons";
 import { readTextFileLines, BaseDirectory } from "@tauri-apps/plugin-fs";
-import AgentMessage from "./AgentMessage";
-import RoleMessage from "./RoleMessage";
-import CommandMessage from "./CommandMessage";
-import PlanDisplay, { PlanStatus, SimplePlanStep } from "./PlanDisplay";
+import AgentMessage from "./messages/AgentMessage";
+import RoleMessage from "./messages/RoleMessage";
+import CommandMessage from "./messages/CommandMessage";
+import PlanDisplay, { PlanStatus, SimplePlanStep } from "./messages/PlanDisplay";
 import type { SessionMessage, SessionSummary } from "@/types/session";
-import { buildDatedPath } from "@/lib/pathParse";
+import Instructions from "./messages/Instructions";
 
 interface SessionData {
   instructions: string;
@@ -83,7 +83,7 @@ const SessionView = (props: SessionViewProps) => {
   const [isSessionLoading, setIsSessionLoading] = createSignal(false);
   const [sessionError, setSessionError] = createSignal<string | null>(null);
   const [sessionCache, setSessionCache] = createSignal<Record<string, SessionData>>({});
-  const [isInstructionsOpen, setIsInstructionsOpen] = createSignal(false);
+
   const hasMessages = createMemo(() => messages().length > 0);
   const hasSelection = createMemo(() => Boolean(props.summary));
   let activeRequestId = 0;
@@ -94,7 +94,6 @@ const SessionView = (props: SessionViewProps) => {
     setCwd("");
     setTotalTokens(0);
     setMessages([]);
-    setIsInstructionsOpen(false);
   };
 
   const applySessionData = (data: SessionData | null) => {
@@ -206,7 +205,8 @@ const SessionView = (props: SessionViewProps) => {
             } catch (e) {
               // not JSON, ignore
             }
-          } else if (rawPlan && typeof rawPlan === "object" && Array.isArray(rawPlan.plan)) {
+          }
+          else if (rawPlan && typeof rawPlan === "object" && Array.isArray(rawPlan.plan)) {
             planData = rawPlan.plan;
           }
 
@@ -390,24 +390,7 @@ const SessionView = (props: SessionViewProps) => {
             </p>
           )}
         </Show>
-          <div class="rounded-xl border border-slate-800/40 bg-slate-900/50 p-2 sm:col-span-2">
-            <span class="flex items-center justify-between">
-              <span>Instructions</span>
-              <button
-                type="button"
-                class="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-100 transition hover:border-indigo-400/60 hover:bg-indigo-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-                aria-expanded={isInstructionsOpen()}
-                onclick={() => setIsInstructionsOpen((prev) => !prev)}
-              >
-                {isInstructionsOpen() ? "Hide" : "Show"}
-              </button>
-            </span>
-            <Show when={isInstructionsOpen()}>
-              <p class="whitespace-pre-wrap text-sm text-slate-100">
-                {instructions() || "No instructions provided."}
-              </p>
-            </Show>
-          </div>
+          <Instructions instructions={instructions()} />
       </section>
 
       <section

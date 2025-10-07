@@ -1,9 +1,8 @@
 import { createSignal } from "solid-js";
 import { useSearchParams } from "@solidjs/router";
-import ConversationsList from "../components/ConversationsList";
-import SessionView from "../components/SessionView";
-import type { SessionSummary } from "../types/session";
-import "../App.css";
+import ConversationsList from "@/components/ConversationsList";
+import SessionView from "@/components/SessionView";
+import type { SessionSummary } from "@/types/session";
 
 export default function SessionPage() {
   const [activeSummary, setActiveSummary] = createSignal<SessionSummary | null>(null);

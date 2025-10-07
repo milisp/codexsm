@@ -1,9 +1,11 @@
 import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import type { SessionSummary } from "../types/session";
+import type { SessionSummary } from "@/types/session";
 import { Link } from "@/ui";
-import { TbReload, TbDotsVertical } from 'solid-icons/tb'
-import Dropdown, { DropdownItem } from "@/ui/Dropdown";
+import { TbReload } from "solid-icons/tb";
+
+import { useSessionActions } from "@/hooks/useSessionActions";
+import SessionDropdown from "./SessionDropdown";
 
 interface ConversationsListProps {
   projectPath: string;
@@ -13,22 +15,37 @@ interface ConversationsListProps {
 const ConversationsList = (props: ConversationsListProps) => {
   const [sessions, setSessions] = createSignal<SessionSummary[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
   const [selectedKey, setSelectedKey] = createSignal<string | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [editingSessionId, setEditingSessionId] = createSignal<string | null>(null);
-  let dropdownRef: { close: () => void } | undefined;
+
+  const {
+    handleRename,
+    editingSessionId,
+    setEditingSessionId,
+    error,
+    setError,
+  } = useSessionActions({
+    projectPath: props.projectPath,
+    setSessions,
+    sessions,
+    setSelectedKey,
+    selectedKey,
+    onSelect: props.onSelect,
+  });
 
   const fetchSessions = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      console.log(props.projectPath)
-      const response = await invoke<{ sessions: SessionSummary[] }>("get_project_sessions", {projectPath: props.projectPath});
-      console.log(response)
+      console.log(props.projectPath);
+      const response = await invoke<{ sessions: SessionSummary[] }>(
+        "get_project_sessions",
+        { projectPath: props.projectPath },
+      );
+      console.log(response);
       const sessionList: SessionSummary[] = response.sessions;
-      
+
       setSessions(sessionList);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -44,34 +61,21 @@ const ConversationsList = (props: ConversationsListProps) => {
   const visibleSessions = createMemo(() => {
     const query = searchQuery().toLowerCase().trim();
     if (!query) return sessions();
-    return sessions().filter((s) =>
-      s.text.toLowerCase().includes(query) || s.session_id.toLowerCase().includes(query)
+    return sessions().filter(
+      (s) =>
+        s.text.toLowerCase().includes(query) ||
+        s.session_id.toLowerCase().includes(query),
     );
   });
 
   const hasSessions = createMemo(() => visibleSessions().length > 0);
 
   const handleSelect = (summary: SessionSummary | null) => {
-    console.log(summary)
+    console.log(summary);
     const nextKey = summary?.session_id ?? null;
     setSelectedKey(nextKey);
 
     props.onSelect(summary);
-  };
-
-  const handleDelete = async (sessionToDelete: SessionSummary) => {
-    try {
-      await invoke("delete_session_file", {
-        projectPath: props.projectPath,
-        sessionPath: sessionToDelete.path,
-      });
-      setSessions(sessions().filter(s => s.session_id !== sessionToDelete.session_id));
-      if (selectedKey() === sessionToDelete.session_id) {
-        handleSelect(null);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
   };
 
   return (
@@ -111,8 +115,8 @@ const ConversationsList = (props: ConversationsListProps) => {
               {isLoading()
                 ? "Scanning conversations…"
                 : sessions().length === 0
-                ? "No sessions found."
-                : "No matching sessions."}
+                  ? "No sessions found."
+                  : "No matching sessions."}
             </p>
           }
         >
@@ -120,32 +124,8 @@ const ConversationsList = (props: ConversationsListProps) => {
             <For each={visibleSessions()}>
               {(session) => {
                 const isActive = selectedKey() === session.session_id;
-  const handleRename = async (session: SessionSummary, newTitle: string) => {
-    if (newTitle.trim().length === 0) {
-      setEditingSessionId(null);
-      return;
-    }
-    try {
-      await invoke("update_cache_title", {
-        projectPath: props.projectPath,
-        sessionPath: session.path,
-        newText: newTitle.trim(),
-      });
-      setSessions(
-        sessions().map((s) =>
-          s.session_id === session.session_id
-            ? { ...s, text: newTitle.trim() }
-            : s
-        )
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setEditingSessionId(null);
-    }
-  };
 
-  return (
+                return (
                   <div
                     class={`group relative flex w-full items-center justify-between px-3 py-0.5 text-left transition ${
                       isActive
@@ -162,7 +142,9 @@ const ConversationsList = (props: ConversationsListProps) => {
                           onClick={() => handleSelect(session)}
                         >
                           <span class="text-sm font-medium text-slate-100 group-hover:text-slate-50">
-                            {session.text && session.text.length > 0 ? session.text : session.session_id}
+                            {session.text && session.text.length > 0
+                              ? session.text
+                              : session.session_id}
                           </span>
                         </button>
                       }
@@ -170,7 +152,9 @@ const ConversationsList = (props: ConversationsListProps) => {
                       <input
                         type="text"
                         value={session.text || session.session_id}
-                        onBlur={(e) => handleRename(session, e.currentTarget.value)}
+                        onBlur={(e) =>
+                          handleRename(session, e.currentTarget.value)
+                        }
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.currentTarget.blur();
@@ -180,37 +164,17 @@ const ConversationsList = (props: ConversationsListProps) => {
                         autofocus
                       />
                     </Show>
-                    <div class="absolute right-2 top-1/2 -translate-y-1/2 z-20 opacity-100 group-hover:opacity-100">
-                      <Dropdown
-                        ref={(dropdown) => (dropdownRef = dropdown)}
-                        trigger={(triggerProps) => (
-                          <button
-                            {...triggerProps}
-                            type="button"
-                            class="rounded-md p-2 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-600"
-                          >
-                            <TbDotsVertical size={16} />
-                          </button>
-                        )}
-                      >
-                        <DropdownItem onClick={() => void handleDelete(session)}>
-                          <span class="z-50">Delete</span>
-                        </DropdownItem>
-                        <DropdownItem onClick={() => {
-                          setEditingSessionId(session.session_id);
-                          dropdownRef?.close();
-                          // Delay selection to allow input to render and focus
-                          setTimeout(() => {
-                            const input = document.querySelector<HTMLInputElement>("input[autofocus]");
-                            if (input) {
-                              input.select();
-                            }
-                          }, 0);
-                        }}>
-                          <span class="z-50">Rename</span>
-                        </DropdownItem>
-                      </Dropdown>
-                    </div>
+                    <SessionDropdown
+                      session={session}
+                      projectPath={props.projectPath}
+                      setSessions={setSessions}
+                      sessions={sessions}
+                      setSelectedKey={setSelectedKey}
+                      selectedKey={selectedKey}
+                      onSelect={props.onSelect}
+                      handleRename={handleRename}
+                      setEditingSessionId={setEditingSessionId}
+                    />
                   </div>
                 );
               }}

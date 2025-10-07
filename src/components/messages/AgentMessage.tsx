@@ -1,4 +1,5 @@
 import { Component, Show } from "solid-js";
+import { CollapsibleContentWrapper } from "../CollapsibleContentWrapper";
 
 export interface AgentMessageProps {
   content: string;
@@ -16,7 +17,8 @@ const AgentMessage: Component<AgentMessageProps> = (props) => (
       <Show when={props.variant === "reasoning"}>
         🧠
       </Show>
-      <p class="whitespace-pre-wrap leading-relaxed">{props.content}</p>
+      {/* <p class="whitespace-pre-wrap leading-relaxed">{props.content}</p> */}
+      <CollapsibleContentWrapper content={props.content} />
     </span>
   </article>
 );

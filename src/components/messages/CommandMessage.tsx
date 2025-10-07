@@ -1,4 +1,5 @@
 import { Component, Show } from "solid-js";
+import { CollapsibleContentWrapper } from "../CollapsibleContentWrapper";
 
 export interface CommandMessageProps {
   content: string;
@@ -11,7 +12,9 @@ const CommandMessage: Component<CommandMessageProps> = (props) => (
   >
     <span class="flex">
       💻
-      <Show when={props.variant === "reasoning"} fallback={<p class="whitespace-pre-wrap leading-relaxed">{props.content}</p>}>
+      <Show when={props.variant === "reasoning"} fallback={
+        <CollapsibleContentWrapper content={props.content} />
+      }>
         <div class="whitespace-pre-wrap leading-relaxed" innerHTML={props.content} />
       </Show>
     </span>
