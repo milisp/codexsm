@@ -1,9 +1,11 @@
 mod commands;
-mod utils;
 mod config;
+mod utils;
+mod terminal;
 
 use commands::{get_project_sessions, update_cache_title, delete_session_file};
 use config::read_codex_config;
+use terminal::open_terminal_with_command;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -15,6 +17,7 @@ pub fn run() {
             delete_session_file,
             update_cache_title,
             read_codex_config,
+            open_terminal_with_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

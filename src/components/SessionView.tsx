@@ -7,6 +7,7 @@ import CommandMessage from "./messages/CommandMessage";
 import PlanDisplay, { PlanStatus, SimplePlanStep } from "./messages/PlanDisplay";
 import type { SessionMessage, SessionSummary } from "@/types/session";
 import Instructions from "./messages/Instructions";
+import { invoke } from "@tauri-apps/api/core";
 
 interface SessionData {
   instructions: string;
@@ -77,6 +78,7 @@ const renderMessage = (msg: SessionMessage) => {
 
 const SessionView = (props: SessionViewProps) => {
   const [instructions, setInstructions] = createSignal("");
+  const [sessionId, setSessionId] = createSignal("");
   const [cwd, setCwd] = createSignal("");
   const [totalTokens, setTotalTokens] = createSignal(0);
   const [messages, setMessages] = createSignal<SessionMessage[]>([]);
@@ -240,6 +242,7 @@ const SessionView = (props: SessionViewProps) => {
 
   const loadSession = async (summary: SessionSummary, options: { force?: boolean } = {}) => {
     const { session_id, path } = summary;
+    setSessionId(session_id)
     const { force = false } = options;
 
     const cache = sessionCache();
@@ -365,6 +368,17 @@ const SessionView = (props: SessionViewProps) => {
     messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: "smooth" });
   };
 
+  async function runCommand(session_id: string, cwd: string) {
+    console.log(session_id, cwd)
+    const cmd = `cd ${cwd} && codex resume ${session_id}`;
+    try {
+      await invoke("open_terminal_with_command", { command: cmd });
+      console.log("Terminal opened successfully!");
+    } catch (err) {
+      console.error("Failed to open terminal:", err);
+    }
+  }
+
   return (
     // make this view fill the viewport like the conversations list so heights match
     <div class="flex flex-col w-full h-screen">
@@ -372,6 +386,11 @@ const SessionView = (props: SessionViewProps) => {
         <div class="flex flex-wrap items-center justify-between">
           {cwd() || "Unknown"}
           <span class="flex gap-2">
+            <button
+              onclick={() => runCommand(sessionId(), cwd())}
+            >
+              💻
+            </button>
             <span class="items-center">Token {Math.trunc(totalTokens() / 1000)}k</span>
             <button
               type="button"
