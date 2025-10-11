@@ -69,6 +69,7 @@ export default function ProjectsPage() {
       <div class="mx-auto max-w-3xl py-6">
         <div class="flex items-center justify-between mb-6">
           <input
+            autofocus={true}
             type="text"
             placeholder="Search projects..."
             class="block w-full rounded-md border border-slate-700/50 bg-slate-800/40 pl-10 pr-3 py-2 text-sm placeholder-slate-400 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
