@@ -17,6 +17,26 @@ export default function ProjectsPage() {
   const [error, setError] = createSignal<string | null>(null);
   const [searchTerm, setSearchTerm] = createSignal("");
 
+  const scanAndMergeProjects = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const scannedData: Project[] = await invoke("scan_projects");
+      const existingPaths = new Set(projects().map(p => p.path));
+      const newProjects = scannedData.filter(p => !existingPaths.has(p.path));
+      const combined = [...projects(), ...newProjects];
+
+      setProjects(combined);
+
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const filteredProjects = createMemo(() => {
     const term = searchTerm().toLowerCase();
     if (!term) return projects();
@@ -62,6 +82,14 @@ export default function ProjectsPage() {
           >
             <span class="i-heroicons-arrow-path-20-solid hidden h-4 w-4 animate-spin [display:var(--loading-display)]"/>
             <span>Refresh</span>
+          </button>
+          <button
+            class="inline-flex items-center gap-2 rounded-md border border-slate-700/50 px-3 py-1.5 text-sm hover:bg-slate-800/60 active:bg-slate-800 transition-colors"
+            onClick={scanAndMergeProjects}
+            disabled={loading()}
+          >
+            <span class="i-heroicons-magnifying-glass-20-solid hidden h-4 w-4 animate-spin [display:var(--loading-display)]"/>
+            <span>Scan Untrusted</span>
           </button>
         </div>
 
@@ -112,6 +140,7 @@ export default function ProjectsPage() {
                   >
                     <div class="flex items-center justify-between">
                       <span class="text-base font-semibold tracking-tight">{project.path.split('/').pop()}</span>
+                      <span>{project.trust_level}</span>
                     </div>
                     <p class="mt-1 line-clamp-1 text-xs text-slate-400 group-hover:text-slate-300">{project.path}</p>
                   </Link>

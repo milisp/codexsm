@@ -1,9 +1,16 @@
 use crate::utils::file::{get_sessions_path, scan_jsonl_files, read_first_line, get_session_info};
 use chrono::{NaiveDateTime, Utc};
 use serde_json::{Value, json};
+use std::collections::HashSet;
 use std::fs::{File, read_to_string};
-use std::io::Write;
+use std::io::{self, Write, BufReader, BufRead};
 use std::path::PathBuf;
+
+fn count_lines(file_path: &PathBuf) -> io::Result<usize> {
+    let file = File::open(file_path)?;
+    let reader = BufReader::new(file);
+    Ok(reader.lines().count())
+}
 
 fn get_cache_dir() -> Result<PathBuf, String> {
     let sessions_dir = get_sessions_path()?;
@@ -14,8 +21,12 @@ fn get_cache_dir() -> Result<PathBuf, String> {
     Ok(cache_dir)
 }
 
+use base64::engine::Engine as _;
+use base64::engine::general_purpose;
+// ... (other imports)
+
 fn get_cache_path_for_project(project_path: &str) -> Result<PathBuf, String> {
-    let encoded = base64::encode(project_path);
+    let encoded = general_purpose::STANDARD.encode(project_path);
     Ok(get_cache_dir()?.join(format!("{}.json", encoded)))
 }
 
@@ -156,4 +167,54 @@ pub async fn delete_session_file(project_path: String, session_path: String) -> 
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn scan_projects() -> Result<Vec<Value>, String> {
+    let sessions_dir = get_sessions_path()?;
+    let mut unique_projects = HashSet::new();
+
+    for entry in scan_jsonl_files(&sessions_dir) {
+        let file_path = entry.path().to_path_buf();
+
+        match count_lines(&file_path) {
+            Ok(line_count) if line_count < 4 => {
+                eprintln!("Deleting file with {} lines: {:?}", line_count, file_path);
+                if let Err(e) = std::fs::remove_file(&file_path) {
+                    eprintln!("Failed to delete file {:?}: {}", file_path, e);
+                }
+                continue;
+            }
+            Ok(_) => { /* File has enough lines, proceed */ }
+            Err(e) => {
+                eprintln!("Failed to count lines for {:?}: {}", file_path, e);
+                continue;
+            }
+        }
+
+        let mut project_path: Option<String> = None;
+        match read_first_line(file_path.clone()) {
+            Ok(line) => {
+                if let Ok(value) = serde_json::from_str::<Value>(&line) {
+                    if let Some(cwd) = value["payload"]["cwd"].as_str() {
+                        project_path = Some(cwd.to_string());
+                    }
+                }
+            }
+            Err(e) => eprintln!("Failed to read first line for {:?}: {}", file_path, e),
+        }
+
+        if let Some(cwd) = project_path {
+            unique_projects.insert(cwd);
+        }
+    }
+
+    let results: Vec<Value> = unique_projects.into_iter().map(|path| {
+        json!({
+            "path": path,
+            "trust_level": Some("no"),
+        })
+    }).collect();
+
+    Ok(results)
 }
