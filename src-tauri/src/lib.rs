@@ -3,7 +3,7 @@ mod config;
 mod utils;
 mod terminal;
 
-use commands::{get_project_sessions, update_cache_title, delete_session_file, scan_projects};
+use commands::{get_project_sessions, update_cache_title, delete_session_file, scan_projects, delete_cache_file};
 use config::read_codex_config;
 use terminal::open_terminal_with_command;
 
@@ -19,6 +19,7 @@ pub fn run() {
             update_cache_title,
             read_codex_config,
             open_terminal_with_command,
+            delete_cache_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

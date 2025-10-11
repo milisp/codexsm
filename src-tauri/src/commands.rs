@@ -148,6 +148,15 @@ pub async fn update_cache_title(project_path: String, session_path: String, new_
 }
 
 #[tauri::command]
+pub async fn delete_cache_file(project_path: String) -> Result<(), String> {
+    let cache_path = get_cache_path_for_project(&project_path)?;
+    std::fs::remove_file(&cache_path)
+        .map_err(|e| format!("Failed to delete cache: {}", e))?;
+    Ok(())
+}
+
+    // Update cache
+#[tauri::command]
 pub async fn delete_session_file(project_path: String, session_path: String) -> Result<(), String> {
     std::fs::remove_file(&session_path)
         .map_err(|e| format!("Failed to delete session: {}", e))?;

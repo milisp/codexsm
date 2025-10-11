@@ -32,6 +32,15 @@ const ConversationsList = (props: ConversationsListProps) => {
     selectedKey,
     onSelect: props.onSelect,
   });
+  
+  const reloadSessions = async() => {
+    try {
+      await invoke("delete_cache_file", { projectPath: props.projectPath });
+    } catch (err) {
+      console.log(err)
+    }
+    await fetchSessions()
+  }
 
   const fetchSessions = async () => {
     setIsLoading(true);
@@ -87,7 +96,7 @@ const ConversationsList = (props: ConversationsListProps) => {
         <button
           type="button"
           class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
-          onclick={() => void fetchSessions()}
+          onclick={() => void reloadSessions()}
           disabled={isLoading()}
         >
           {isLoading() ? "Loading…" : <TbReload size={18} />}
