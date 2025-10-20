@@ -4,6 +4,7 @@ import { readTextFileLines, BaseDirectory } from "@tauri-apps/plugin-fs";
 import AgentMessage from "./messages/AgentMessage";
 import RoleMessage from "./messages/RoleMessage";
 import CommandMessage from "./messages/CommandMessage";
+import {WarpOutput} from "./messages/WarpOutput";
 import PlanDisplay, { PlanStatus, SimplePlanStep } from "./messages/PlanDisplay";
 import type { SessionMessage, SessionSummary } from "@/types/session";
 import Instructions from "./messages/Instructions";
@@ -27,7 +28,7 @@ interface SessionViewProps {
 }
 
 const renderMessage = (msg: SessionMessage) => {
-  if (msg.type === "agent_message" || msg.type === "agent_reasoning") {
+  if (msg.type === "agent_message" || msg.type === "agent_reasoning" || msg.type === "agent_reasoning_raw_content") {
     return <AgentMessage content={msg.content || ""} variant={msg.variant} />;
   }
 
@@ -63,6 +64,10 @@ const renderMessage = (msg: SessionMessage) => {
 
   if (msg.type === "function_call") {
     return <CommandMessage content={msg.content || ""} variant={msg.variant} />;
+  }
+
+  if (msg.type === "function_call_output") {
+    return <WarpOutput content={msg.content || ""} title={msg.title || ""} />;
   }
 
   if (msg.role === "user" || msg.role === "assistant") {
@@ -137,6 +142,7 @@ const SessionView = (props: SessionViewProps) => {
         }
         break;
       }
+      case "agent_reasoning_raw_content":
       case "agent_message": {
         const content = normalizeContent(payload.message ?? payload.text);
         if (content) {
@@ -150,7 +156,7 @@ const SessionView = (props: SessionViewProps) => {
         break;
       }
       case "user_message": {
-        const content = normalizeContent(payload.message ?? payload.text);
+        const content = normalizeContent(payload.message);
         if (content) {
           parsedMessages.push({
             id: `user_message-${nextIndex()}`,
@@ -224,12 +230,14 @@ const SessionView = (props: SessionViewProps) => {
         break;
       }
       case "function_call_output": {
-        const content = normalizeContent(payload.output.output);
-        if (content) {
+          const call_output_obj = JSON.parse(payload.output)
+          const content = call_output_obj.output
+          if (content) {
           parsedMessages.push({
             id: `function_call_output-${nextIndex()}`,
             type: payload.type,
             content,
+            title: "function_call_output",
             variant: "reasoning",
           });
         }
@@ -429,7 +437,12 @@ const SessionView = (props: SessionViewProps) => {
           }
         >
           <ul class="flex flex-col gap-3 pb-12">
-            <For each={messages()}>{(msg) => <li class="flex">{renderMessage(msg)}</li>}</For>
+            <For each={messages()}>{(msg) => 
+              <div>
+                <li class="flex">{renderMessage(msg)}</li>
+                <span class="rounded bg-blue-200 px-2 py-0.5">{msg.type}</span>
+              </div>
+            }</For>
           </ul>
         </Show>
       </section>

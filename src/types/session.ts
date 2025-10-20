@@ -19,4 +19,5 @@ export interface SessionMessage {
   content?: string;
   plan?: Plan[];
   variant?: MessageVariant;
+  title?: string;
 }
