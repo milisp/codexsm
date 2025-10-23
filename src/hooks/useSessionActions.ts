@@ -11,6 +11,8 @@ interface UseSessionActionsProps {
   setSelectedKey: (key: string | null) => void;
   selectedKey: () => string | null;
   onSelect: (session: SessionSummary | null) => void;
+  selectedSessionIds: () => Set<string>;
+  setSelectedSessionIds: (updater: (prev: Set<string>) => Set<string>) => void;
 }
 
 export const useSessionActions = (props: UseSessionActionsProps) => {
@@ -31,6 +33,31 @@ export const useSessionActions = (props: UseSessionActionsProps) => {
       if (props.selectedKey() === sessionToDelete.session_id) {
         props.onSelect(null);
       }
+      props.setSelectedSessionIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(sessionToDelete.session_id);
+        return newSet;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleBatchDelete = async (sessionIdsToDelete: string[]) => {
+    try {
+      await invoke("delete_sessions_files", {
+        projectPath: props.projectPath,
+        sessionPaths: props.sessions()
+          .filter((s) => sessionIdsToDelete.includes(s.session_id))
+          .map((s) => s.path),
+      });
+      props.setSessions((prevSessions) =>
+        prevSessions.filter((s) => !sessionIdsToDelete.includes(s.session_id)),
+      );
+      if (sessionIdsToDelete.includes(props.selectedKey() || "")) {
+        props.onSelect(null);
+      }
+      props.setSelectedSessionIds(new Set()); // Clear all selections
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -63,6 +90,7 @@ export const useSessionActions = (props: UseSessionActionsProps) => {
 
   return {
     handleDelete,
+    handleBatchDelete,
     handleRename,
     editingSessionId,
     setEditingSessionId,

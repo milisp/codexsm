@@ -17,9 +17,12 @@ const ConversationsList = (props: ConversationsListProps) => {
   const [isLoading, setIsLoading] = createSignal(false);
   const [selectedKey, setSelectedKey] = createSignal<string | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
+  const [selectedSessionIds, setSelectedSessionIds] = createSignal<Set<string>>(new Set());
+  const [isBatchDeleteMode, setIsBatchDeleteMode] = createSignal(false);
 
   const {
     handleRename,
+    handleBatchDelete,
     editingSessionId,
     setEditingSessionId,
     error,
@@ -31,6 +34,8 @@ const ConversationsList = (props: ConversationsListProps) => {
     setSelectedKey,
     selectedKey,
     onSelect: props.onSelect,
+    setSelectedSessionIds,
+    selectedSessionIds,
   });
   
   const reloadSessions = async() => {
@@ -79,7 +84,36 @@ const ConversationsList = (props: ConversationsListProps) => {
 
   const hasSessions = createMemo(() => visibleSessions().length > 0);
 
+  const toggleSessionSelection = (sessionId: string) => {
+    setSelectedSessionIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sessionId)) {
+        newSet.delete(sessionId);
+      } else {
+        newSet.add(sessionId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSessionIds().size === visibleSessions().length) {
+      setSelectedSessionIds(new Set());
+    } else {
+      setSelectedSessionIds(new Set(visibleSessions().map(s => s.session_id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedSessionIds(new Set());
+    setIsBatchDeleteMode(false);
+  };
+
   const handleSelect = (summary: SessionSummary | null) => {
+    if (isBatchDeleteMode()) {
+      // If in selection mode, don't change the active session
+      return;
+    }
     console.log(summary);
     const nextKey = summary?.session_id ?? null;
     setSelectedKey(nextKey);
@@ -88,19 +122,31 @@ const ConversationsList = (props: ConversationsListProps) => {
   };
 
   return (
-    <aside class="flex h-screen w-64 flex-col rounded-2xl border border-slate-700/40 bg-slate-950/60 py-5 shadow-lg shadow-slate-950/40">
+    <aside class="flex h-screen w-96 flex-col rounded-2xl border border-slate-700/40 bg-slate-950/60 py-5 shadow-lg shadow-slate-950/40">
       <div class="mb-4 flex items-center justify-between px-2">
         <Link href="/" variant="ghost">
           <span>Projects</span>
         </Link>
-        <button
-          type="button"
-          class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
-          onclick={() => void reloadSessions()}
-          disabled={isLoading()}
-        >
-          {isLoading() ? "Loading…" : <TbReload size={18} />}
-        </button>
+        <div class="flex items-center gap-2">
+          <Show when={isBatchDeleteMode() && selectedSessionIds().size > 0}>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center rounded-md border border-red-700 bg-red-900 px-2 py-1 text-xs font-medium text-red-300 transition hover:border-red-600 hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:cursor-progress disabled:opacity-60"
+              onclick={() => void handleBatchDelete(Array.from(selectedSessionIds()))}
+              disabled={isLoading()}
+            >
+              Delete Selected ({selectedSessionIds().size})
+            </button>
+          </Show>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
+            onclick={() => void reloadSessions()}
+            disabled={isLoading()}
+          >
+            {isLoading() ? "Loading…" : <TbReload size={18} />}
+          </button>
+        </div>
       </div>
       <input
         type="search"
@@ -109,6 +155,35 @@ const ConversationsList = (props: ConversationsListProps) => {
         placeholder="Search"
         class="mb-4 h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       />
+      <div class="mb-4 flex items-center justify-between px-2">
+        <Show when={!isBatchDeleteMode()}>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
+            onclick={() => setIsBatchDeleteMode(true)}
+          >
+            Select Sessions
+          </button>
+        </Show>
+        <Show when={isBatchDeleteMode()}>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
+              onclick={toggleSelectAll}
+            >
+              {selectedSessionIds().size === visibleSessions().length ? "Deselect All" : "Select All"}
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
+              onclick={clearSelection}
+            >
+              Cancel
+            </button>
+          </div>
+        </Show>
+      </div>
       <Show when={error()}>
         {(message) => (
           <p class="mb-3 rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs text-red-200">
@@ -124,7 +199,7 @@ const ConversationsList = (props: ConversationsListProps) => {
               {isLoading()
                 ? "Scanning conversations…"
                 : sessions().length === 0
-                  ? "No sessions found."
+                  ? "No sessions found." 
                   : "No matching sessions."}
             </p>
           }
@@ -133,6 +208,7 @@ const ConversationsList = (props: ConversationsListProps) => {
             <For each={visibleSessions()}>
               {(session) => {
                 const isActive = selectedKey() === session.session_id;
+                const isSelected = selectedSessionIds().has(session.session_id);
 
                 return (
                   <div
@@ -142,6 +218,15 @@ const ConversationsList = (props: ConversationsListProps) => {
                         : "border-slate-800/40 bg-slate-900/40 text-slate-300 hover:border-slate-700/60 hover:bg-slate-900/70"
                     }`}
                   >
+                    <Show when={isBatchDeleteMode()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSessionSelection(session.session_id)}
+                        class="mr-2"
+                        onClick={(e) => e.stopPropagation()} // Prevent triggering handleSelect
+                      />
+                    </Show>
                     <Show
                       when={editingSessionId() === session.session_id}
                       fallback={
