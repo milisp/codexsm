@@ -25,20 +25,22 @@ fn load_cache(project_path: &str) -> Result<Option<(DateTime<Utc>, Vec<Value>)>,
     if !cache_path.exists() {
         return Ok(None);
     }
-    
-    let cache_str = read_to_string(&cache_path)
-        .map_err(|e| format!("Failed to read cache: {}", e))?;
+
+    let cache_str =
+        read_to_string(&cache_path).map_err(|e| format!("Failed to read cache: {}", e))?;
     let json_val: Value = serde_json::from_str(&cache_str)
         .map_err(|e| format!("Failed to parse cache JSON: {}", e))?;
-    
-    let last_scanned = json_val["last_scanned"].as_str()
+
+    let last_scanned = json_val["last_scanned"]
+        .as_str()
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&Utc));
-    
-    let sessions = json_val["sessions"].as_array()
+
+    let sessions = json_val["sessions"]
+        .as_array()
         .map(|arr| arr.clone())
         .unwrap_or_default();
-    
+
     match last_scanned {
         Some(dt) => Ok(Some((dt, sessions))),
         None => Ok(None),
@@ -51,20 +53,20 @@ pub async fn get_project_sessions(project_path: String) -> Result<Value, String>
     match load_cache(&project_path)? {
         Some((last_scanned, mut cached_sessions)) => {
             // Incremental scan: only scan files modified after last_scanned
-            let new_sessions = scan_project_sessions_incremental(&project_path, Some(last_scanned))?;
-            
+            let new_sessions =
+                scan_project_sessions_incremental(&project_path, Some(last_scanned))?;
+
             // Merge: Remove old sessions that were re-scanned, then add new ones
             let new_ids: std::collections::HashSet<_> = new_sessions
                 .iter()
                 .filter_map(|s| s["conversationId"].as_str())
                 .collect();
-            
-            cached_sessions.retain(|s| {
-                !new_ids.contains(s["conversationId"].as_str().unwrap_or_default())
-            });
-            
+
+            cached_sessions
+                .retain(|s| !new_ids.contains(s["conversationId"].as_str().unwrap_or_default()));
+
             cached_sessions.extend(new_sessions);
-            
+
             // Re-sort by date
             cached_sessions.sort_by(|a, b| {
                 use super::utils::extract_datetime;
@@ -77,7 +79,7 @@ pub async fn get_project_sessions(project_path: String) -> Result<Value, String>
                     (None, None) => a["path"].as_str().cmp(&b["path"].as_str()),
                 }
             });
-            
+
             // Save updated cache
             save_project_cache(&project_path, &cached_sessions)?;
             Ok(json!({ "sessions": cached_sessions }))

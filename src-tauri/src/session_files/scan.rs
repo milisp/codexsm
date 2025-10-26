@@ -23,7 +23,7 @@ pub fn scan_project_sessions_incremental(
 
     for entry in scan_jsonl_files(&sessions_dir) {
         let path = entry.path();
-        
+
         // Skip files that haven't been modified since last scan
         if let Some(cutoff) = after {
             if let Ok(metadata) = std::fs::metadata(path) {
@@ -35,7 +35,7 @@ pub fn scan_project_sessions_incremental(
                 }
             }
         }
-        
+
         let file_path = path.to_string_lossy().to_string();
         match read_first_line(path) {
             Ok(line) => {

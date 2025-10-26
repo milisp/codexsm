@@ -15,7 +15,6 @@ use terminal::open_terminal_with_command;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             scan_projects,
             get_project_sessions,
