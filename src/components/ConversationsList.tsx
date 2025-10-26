@@ -1,6 +1,6 @@
 import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import type { SessionSummary } from "@/types/session";
+import type { ConversationSummary } from "@/types/session";
 import { Link } from "@/ui";
 import { TbReload } from "solid-icons/tb";
 
@@ -9,11 +9,11 @@ import SessionDropdown from "./SessionDropdown";
 
 interface ConversationsListProps {
   projectPath: string;
-  onSelect: (session: SessionSummary | null) => void;
+  onSelect: (session: ConversationSummary | null) => void;
 }
 
 const ConversationsList = (props: ConversationsListProps) => {
-  const [sessions, setSessions] = createSignal<SessionSummary[]>([]);
+  const [sessions, setSessions] = createSignal<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
   const [selectedKey, setSelectedKey] = createSignal<string | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
@@ -53,12 +53,12 @@ const ConversationsList = (props: ConversationsListProps) => {
 
     try {
       console.log(props.projectPath);
-      const response = await invoke<{ sessions: SessionSummary[] }>(
+      const response = await invoke<{ sessions: ConversationSummary[] }>(
         "get_project_sessions",
         { projectPath: props.projectPath },
       );
       console.log(response);
-      const sessionList: SessionSummary[] = response.sessions;
+      const sessionList: ConversationSummary[] = response.sessions;
 
       setSessions(sessionList);
     } catch (err) {
@@ -77,8 +77,8 @@ const ConversationsList = (props: ConversationsListProps) => {
     if (!query) return sessions();
     return sessions().filter(
       (s) =>
-        s.text.toLowerCase().includes(query) ||
-        s.session_id.toLowerCase().includes(query),
+        s.preview.toLowerCase().includes(query) ||
+        s.conversationId.toLowerCase().includes(query),
     );
   });
 
@@ -98,24 +98,24 @@ const ConversationsList = (props: ConversationsListProps) => {
 
   const toggleSelectAll = () => {
     if (selectedSessionIds().size === visibleSessions().length) {
-      setSelectedSessionIds(new Set());
+      setSelectedSessionIds(new Set<string>());
     } else {
-      setSelectedSessionIds(new Set(visibleSessions().map(s => s.session_id)));
+      setSelectedSessionIds(new Set<string>(visibleSessions().map(s => s.conversationId)));
     }
   };
 
   const clearSelection = () => {
-    setSelectedSessionIds(new Set());
+    setSelectedSessionIds(new Set<string>());
     setIsBatchDeleteMode(false);
   };
 
-  const handleSelect = (summary: SessionSummary | null) => {
+  const handleSelect = (summary: ConversationSummary | null) => {
     if (isBatchDeleteMode()) {
       // If in selection mode, don't change the active session
       return;
     }
     console.log(summary);
-    const nextKey = summary?.session_id ?? null;
+    const nextKey = summary?.conversationId ?? null;
     setSelectedKey(nextKey);
 
     props.onSelect(summary);
@@ -207,8 +207,8 @@ const ConversationsList = (props: ConversationsListProps) => {
           <ul class="flex h-full flex-col gap-2 overflow-y-auto pr-1">
             <For each={visibleSessions()}>
               {(session) => {
-                const isActive = selectedKey() === session.session_id;
-                const isSelected = selectedSessionIds().has(session.session_id);
+                const isActive = selectedKey() === session.conversationId;
+                const isSelected = selectedSessionIds().has(session.conversationId);
 
                 return (
                   <div
@@ -222,13 +222,13 @@ const ConversationsList = (props: ConversationsListProps) => {
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => toggleSessionSelection(session.session_id)}
+                        onChange={() => toggleSessionSelection(session.conversationId)}
                         class="mr-2"
                         onClick={(e) => e.stopPropagation()} // Prevent triggering handleSelect
                       />
                     </Show>
                     <Show
-                      when={editingSessionId() === session.session_id}
+                      when={editingSessionId() === session.conversationId}
                       fallback={
                         <button
                           type="button"
@@ -236,16 +236,16 @@ const ConversationsList = (props: ConversationsListProps) => {
                           onClick={() => handleSelect(session)}
                         >
                           <span class="text-sm font-medium text-slate-100 group-hover:text-slate-50">
-                            {session.text && session.text.length > 0
-                              ? session.text
-                              : session.session_id}
+                            {session.preview && session.preview.length > 0
+                              ? session.preview
+                              : session.conversationId}
                           </span>
                         </button>
                       }
                     >
                       <input
                         type="text"
-                        value={session.text || session.session_id}
+                        value={session.preview || session.conversationId}
                         onBlur={(e) =>
                           handleRename(session, e.currentTarget.value)
                         }
@@ -268,6 +268,8 @@ const ConversationsList = (props: ConversationsListProps) => {
                       onSelect={props.onSelect}
                       handleRename={handleRename}
                       setEditingSessionId={setEditingSessionId}
+                      selectedSessionIds={selectedSessionIds}
+                      setSelectedSessionIds={setSelectedSessionIds}
                     />
                   </div>
                 );

@@ -1,10 +1,15 @@
 mod commands;
 mod config;
-mod utils;
+mod scan;
 mod terminal;
+mod utils;
 
-use commands::{get_project_sessions, update_cache_title, delete_session_file, scan_projects, delete_cache_file, delete_sessions_files};
+use commands::{
+    delete_cache_file, delete_session_file, delete_sessions_files, get_project_sessions,
+    update_cache_title,
+};
 use config::read_codex_config;
+use scan::scan_projects;
 use terminal::open_terminal_with_command;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

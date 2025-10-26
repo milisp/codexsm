@@ -489,6 +489,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "dirs",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "tauri",

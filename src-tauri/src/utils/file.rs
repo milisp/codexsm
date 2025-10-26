@@ -1,6 +1,6 @@
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
-use serde_json::Value;
 
 pub fn get_sessions_path() -> Result<PathBuf, String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
@@ -17,11 +17,22 @@ pub fn scan_jsonl_files<P: AsRef<Path>>(dir_path: P) -> impl Iterator<Item = wal
 
 pub fn read_first_line<P: AsRef<Path>>(file_path: P) -> Result<String, String> {
     use std::fs::File;
-    use std::io::{BufReader, BufRead};
+    use std::io::{BufRead, BufReader};
 
-    let file = File::open(&file_path).map_err(|e| format!("Failed to open file {:?}: {}", file_path.as_ref(), e))?;
+    let file = File::open(&file_path)
+        .map_err(|e| format!("Failed to open file {:?}: {}", file_path.as_ref(), e))?;
     let reader = BufReader::new(file);
-    reader.lines().next().transpose().map_err(|e| format!("Failed to read first line from {:?}: {}", file_path.as_ref(), e))?
+    reader
+        .lines()
+        .next()
+        .transpose()
+        .map_err(|e| {
+            format!(
+                "Failed to read first line from {:?}: {}",
+                file_path.as_ref(),
+                e
+            )
+        })?
         .ok_or_else(|| format!("File {:?} is empty", file_path.as_ref()))
 }
 
@@ -32,10 +43,10 @@ pub struct SessionInfo {
 
 pub fn get_session_info<P: AsRef<Path>>(file_path: P) -> Result<SessionInfo, String> {
     use std::fs::File;
-    use std::io::{BufReader, BufRead};
+    use std::io::{BufRead, BufReader};
 
-
-    let file = File::open(&file_path).map_err(|e| format!("Failed to open file {:?}: {}", file_path.as_ref(), e))?;
+    let file = File::open(&file_path)
+        .map_err(|e| format!("Failed to open file {:?}: {}", file_path.as_ref(), e))?;
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
@@ -79,7 +90,8 @@ pub fn get_session_info<P: AsRef<Path>>(file_path: P) -> Result<SessionInfo, Str
         }
     }
 
-    let final_session_id = session_id.ok_or_else(|| format!("Could not extract session_id from {:?}", file_path.as_ref()))?;
+    let final_session_id = session_id
+        .ok_or_else(|| format!("Could not extract session_id from {:?}", file_path.as_ref()))?;
 
     Ok(SessionInfo {
         session_id: final_session_id,

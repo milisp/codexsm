@@ -2,14 +2,15 @@ import { createSignal } from "solid-js";
 import { useSearchParams } from "@solidjs/router";
 import ConversationsList from "@/components/ConversationsList";
 import SessionView from "@/components/SessionView";
-import type { SessionSummary } from "@/types/session";
+import type { ConversationSummary } from "@/types/session";
 
 export default function SessionPage() {
-  const [activeSummary, setActiveSummary] = createSignal<SessionSummary | null>(null);
+  const [activeSummary, setActiveSummary] = createSignal<ConversationSummary | null>(null);
   const [params] = useSearchParams();
+  console.log(params)
   const projectPath = () => Array.isArray(params.project) ? params.project[0] ?? "" : (params.project ?? "");
 
-  const handleSelectSession = (summary: SessionSummary | null) => {
+  const handleSelectSession = (summary: ConversationSummary | null) => {
     setActiveSummary(summary);
   };
 

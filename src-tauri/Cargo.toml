@@ -28,4 +28,5 @@ dirs = "6.0.0"
 chrono = "0.4"
 toml = "0.9.7"
 base64 = "0.22.1"
+schemars = { version = "0.8", features = ["derive"] }
 

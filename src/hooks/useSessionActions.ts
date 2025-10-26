@@ -1,16 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
-import type { SessionSummary } from "@/types/session";
+import type { ConversationSummary } from "@/types/session";
 
 interface UseSessionActionsProps {
   projectPath: string;
   setSessions: (
-    updater: (prev: SessionSummary[]) => SessionSummary[],
+    updater: (prev: ConversationSummary[]) => ConversationSummary[],
   ) => void;
-  sessions: () => SessionSummary[];
+  sessions: () => ConversationSummary[];
   setSelectedKey: (key: string | null) => void;
   selectedKey: () => string | null;
-  onSelect: (session: SessionSummary | null) => void;
+  onSelect: (session: ConversationSummary | null) => void;
   selectedSessionIds: () => Set<string>;
   setSelectedSessionIds: (updater: (prev: Set<string>) => Set<string>) => void;
 }
@@ -21,21 +21,21 @@ export const useSessionActions = (props: UseSessionActionsProps) => {
     null,
   );
 
-  const handleDelete = async (sessionToDelete: SessionSummary) => {
+  const handleDelete = async (sessionToDelete: ConversationSummary) => {
     try {
       await invoke("delete_session_file", {
         projectPath: props.projectPath,
         sessionPath: sessionToDelete.path,
       });
       props.setSessions((prevSessions) =>
-        prevSessions.filter((s) => s.session_id !== sessionToDelete.session_id),
+        prevSessions.filter((s) => s.conversationId !== sessionToDelete.conversationId),
       );
-      if (props.selectedKey() === sessionToDelete.session_id) {
+      if (props.selectedKey() === sessionToDelete.conversationId) {
         props.onSelect(null);
       }
       props.setSelectedSessionIds((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(sessionToDelete.session_id);
+        newSet.delete(sessionToDelete.conversationId);
         return newSet;
       });
     } catch (err) {
@@ -48,11 +48,11 @@ export const useSessionActions = (props: UseSessionActionsProps) => {
       await invoke("delete_sessions_files", {
         projectPath: props.projectPath,
         sessionPaths: props.sessions()
-          .filter((s) => sessionIdsToDelete.includes(s.session_id))
+          .filter((s) => sessionIdsToDelete.includes(s.conversationId))
           .map((s) => s.path),
       });
       props.setSessions((prevSessions) =>
-        prevSessions.filter((s) => !sessionIdsToDelete.includes(s.session_id)),
+        prevSessions.filter((s) => !sessionIdsToDelete.includes(s.conversationId)),
       );
       if (sessionIdsToDelete.includes(props.selectedKey() || "")) {
         props.onSelect(null);
@@ -63,7 +63,7 @@ export const useSessionActions = (props: UseSessionActionsProps) => {
     }
   };
 
-  const handleRename = async (session: SessionSummary, newTitle: string) => {
+  const handleRename = async (session: ConversationSummary, newTitle: string) => {
     if (newTitle.trim().length === 0) {
       setEditingSessionId(null);
       return;
@@ -72,12 +72,12 @@ export const useSessionActions = (props: UseSessionActionsProps) => {
       await invoke("update_cache_title", {
         projectPath: props.projectPath,
         sessionPath: session.path,
-        newText: newTitle.trim(),
+        preview: newTitle.trim(),
       });
       props.setSessions((prevSessions) =>
         prevSessions.map((s) =>
-          s.session_id === session.session_id
-            ? { ...s, text: newTitle.trim() }
+          s.conversationId === session.conversationId
+            ? { ...s, preview: newTitle.trim() }
             : s,
         ),
       );

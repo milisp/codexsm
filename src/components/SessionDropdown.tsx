@@ -1,20 +1,22 @@
 import { TbDotsVertical } from "solid-icons/tb";
 import Dropdown, { DropdownItem } from "@/ui/Dropdown";
-import type { SessionSummary } from "@/types/session";
+import type { ConversationSummary } from "@/types/session";
 import { useSessionActions } from "@/hooks/useSessionActions";
 
 interface SessionDropdownProps {
-  session: SessionSummary;
+  session: ConversationSummary;
   projectPath: string;
   setSessions: (
-    updater: (prev: SessionSummary[]) => SessionSummary[],
+    updater: (prev: ConversationSummary[]) => ConversationSummary[],
   ) => void;
-  sessions: () => SessionSummary[];
+  sessions: () => ConversationSummary[];
   setSelectedKey: (key: string | null) => void;
   selectedKey: () => string | null;
-  onSelect: (session: SessionSummary | null) => void;
-  handleRename: (session: SessionSummary, newTitle: string) => Promise<void>;
+  onSelect: (session: ConversationSummary | null) => void;
+  handleRename: (session: ConversationSummary, newTitle: string) => Promise<void>;
   setEditingSessionId: (id: string | null) => void;
+  selectedSessionIds: () => Set<string>;
+  setSelectedSessionIds: (updater: (prev: Set<string>) => Set<string>) => void;
 }
 
 const SessionDropdown = (props: SessionDropdownProps) => {
@@ -27,6 +29,8 @@ const SessionDropdown = (props: SessionDropdownProps) => {
     setSelectedKey: props.setSelectedKey,
     selectedKey: props.selectedKey,
     onSelect: props.onSelect,
+    selectedSessionIds: props.selectedSessionIds,
+    setSelectedSessionIds: props.setSelectedSessionIds,
   });
 
   return (
@@ -50,7 +54,7 @@ const SessionDropdown = (props: SessionDropdownProps) => {
         </DropdownItem>
         <DropdownItem
           onClick={() => {
-            props.setEditingSessionId(props.session.session_id);
+            props.setEditingSessionId(props.session.conversationId);
             dropdownRef?.close();
             // Delay selection to allow input to render and focus
             setTimeout(() => {

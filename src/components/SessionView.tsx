@@ -6,7 +6,7 @@ import RoleMessage from "./messages/RoleMessage";
 import CommandMessage from "./messages/CommandMessage";
 import {WarpOutput} from "./messages/WarpOutput";
 import PlanDisplay, { PlanStatus, SimplePlanStep } from "./messages/PlanDisplay";
-import type { SessionMessage, SessionSummary } from "@/types/session";
+import type { SessionMessage, ConversationSummary } from "@/types/session";
 import Instructions from "./messages/Instructions";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -24,7 +24,7 @@ const normalizeContent = (value: unknown): string | null => {
 };
 
 interface SessionViewProps {
-  summary: SessionSummary | null;
+  summary: ConversationSummary | null;
 }
 
 const renderMessage = (msg: SessionMessage) => {
@@ -230,8 +230,16 @@ const SessionView = (props: SessionViewProps) => {
         break;
       }
       case "function_call_output": {
-          const call_output_obj = JSON.parse(payload.output)
-          const content = call_output_obj.output
+          console.log(payload)
+          let content = ""
+          try {
+            const call_output_obj = JSON.parse(payload.output)
+            console.log("call_output_obj")
+            console.debug(call_output_obj)
+            content = call_output_obj.output
+          } catch (error) {
+            content = payload.output
+          }
           if (content) {
           parsedMessages.push({
             id: `function_call_output-${nextIndex()}`,
@@ -248,13 +256,13 @@ const SessionView = (props: SessionViewProps) => {
     }
   };
 
-  const loadSession = async (summary: SessionSummary, options: { force?: boolean } = {}) => {
-    const { session_id, path } = summary;
-    setSessionId(session_id)
+  const loadSession = async (summary: ConversationSummary, options: { force?: boolean } = {}) => {
+    const { conversationId, path } = summary;
+    setSessionId(conversationId)
     const { force = false } = options;
 
     const cache = sessionCache();
-    const cachedSession = cache[session_id];
+    const cachedSession = cache[conversationId];
     if (cachedSession && !force) {
       applySessionData(cachedSession);
       setSessionError(null);
@@ -285,11 +293,11 @@ const SessionView = (props: SessionViewProps) => {
         if (!line) continue;
         const cleanedLine = line.replace(/\0/g, "");
         if (!cleanedLine.trim()) continue;
+        const parsed = JSON.parse(cleanedLine);
 
         try {
-          const parsed = JSON.parse(cleanedLine);
           const payload = parsed?.payload ?? {};
-
+          console.log("payload", payload)
           switch (parsed.type) {
             case "session_meta":
               if (typeof payload.instructions === "string") {
@@ -313,6 +321,7 @@ const SessionView = (props: SessionViewProps) => {
               break;
           }
         } catch (parseError) {
+          console.log("parsed", parsed)
           console.error("Unable to parse session line", parseError);
         }
       }
@@ -329,7 +338,7 @@ const SessionView = (props: SessionViewProps) => {
       }
 
       applySessionData(sessionData);
-      setSessionCache((prev) => ({ ...prev, [session_id]: sessionData }));
+      setSessionCache((prev) => ({ ...prev, [conversationId]: sessionData }));
     } catch (fsError) {
       console.error("Failed to read session file", fsError);
 
@@ -376,9 +385,9 @@ const SessionView = (props: SessionViewProps) => {
     messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: "smooth" });
   };
 
-  async function runCommand(session_id: string, cwd: string) {
-    console.log(session_id, cwd)
-    const cmd = `cd ${cwd} && codex resume ${session_id}`;
+  async function runCommand(conversationId: string, cwd: string) {
+    console.log(conversationId, cwd)
+    const cmd = `cd ${cwd} && codex resume ${conversationId}`;
     try {
       await invoke("open_terminal_with_command", { command: cmd });
       console.log("Terminal opened successfully!");

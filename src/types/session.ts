@@ -1,7 +1,7 @@
-export interface SessionSummary {
-  session_id: string;
+export interface ConversationSummary {
+  conversationId: string;
   path: string;
-  text: string;
+  preview: string;
 }
 
 export interface Plan {
