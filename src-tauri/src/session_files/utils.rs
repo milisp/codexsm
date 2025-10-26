@@ -3,8 +3,6 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;
 
-pub mod file;
-
 pub fn count_lines(file_path: &PathBuf) -> io::Result<usize> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);

@@ -1,19 +1,47 @@
-use crate::utils::file::{get_session_info, get_sessions_path, read_first_line, scan_jsonl_files};
-use crate::utils::{count_lines, extract_datetime};
+use super::file::{get_session_info, get_sessions_path, read_first_line};
+use super::utils::{count_lines, extract_datetime};
+use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 use std::collections::HashSet;
+use std::path::Path;
+use walkdir::WalkDir;
 
-pub fn scan_project_sessions(project_path: &str) -> Result<Vec<Value>, String> {
+pub fn scan_jsonl_files<P: AsRef<Path>>(dir_path: P) -> impl Iterator<Item = walkdir::DirEntry> {
+    WalkDir::new(dir_path)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
+}
+
+pub fn scan_project_sessions_incremental(
+    project_path: &str,
+    after: Option<DateTime<Utc>>,
+) -> Result<Vec<Value>, String> {
     let sessions_dir = get_sessions_path()?;
     let mut results = Vec::new();
 
     for entry in scan_jsonl_files(&sessions_dir) {
-        let file_path = entry.path().to_string_lossy().to_string();
-        match read_first_line(entry.path()) {
+        let path = entry.path();
+        
+        // Skip files that haven't been modified since last scan
+        if let Some(cutoff) = after {
+            if let Ok(metadata) = std::fs::metadata(path) {
+                if let Ok(modified) = metadata.modified() {
+                    let modified_datetime: DateTime<Utc> = modified.into();
+                    if modified_datetime <= cutoff {
+                        continue; // Skip this file
+                    }
+                }
+            }
+        }
+        
+        let file_path = path.to_string_lossy().to_string();
+        match read_first_line(path) {
             Ok(line) => {
                 if let Ok(value) = serde_json::from_str::<Value>(&line) {
                     if value["payload"]["cwd"].as_str() == Some(project_path) {
-                        if let Ok(info) = get_session_info(entry.path()) {
+                        if let Ok(info) = get_session_info(path) {
                             let original_text = info.user_message.unwrap_or_default();
                             let truncated_text: String = original_text.chars().take(50).collect();
                             results.push(json!({

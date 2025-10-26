@@ -37,15 +37,6 @@ const ConversationsList = (props: ConversationsListProps) => {
     setSelectedSessionIds,
     selectedSessionIds,
   });
-  
-  const reloadSessions = async() => {
-    try {
-      await invoke("delete_cache_file", { projectPath: props.projectPath });
-    } catch (err) {
-      console.log(err)
-    }
-    await fetchSessions()
-  }
 
   const fetchSessions = async () => {
     setIsLoading(true);
@@ -127,26 +118,14 @@ const ConversationsList = (props: ConversationsListProps) => {
         <Link href="/" variant="ghost">
           <span>Projects</span>
         </Link>
-        <div class="flex items-center gap-2">
-          <Show when={isBatchDeleteMode() && selectedSessionIds().size > 0}>
-            <button
-              type="button"
-              class="inline-flex items-center justify-center rounded-md border border-red-700 bg-red-900 px-2 py-1 text-xs font-medium text-red-300 transition hover:border-red-600 hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:cursor-progress disabled:opacity-60"
-              onclick={() => void handleBatchDelete(Array.from(selectedSessionIds()))}
-              disabled={isLoading()}
-            >
-              Delete Selected ({selectedSessionIds().size})
-            </button>
-          </Show>
-          <button
+        <button
             type="button"
             class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
-            onclick={() => void reloadSessions()}
+            onclick={() => void fetchSessions()}
             disabled={isLoading()}
           >
             {isLoading() ? "Loading…" : <TbReload size={18} />}
           </button>
-        </div>
       </div>
       <input
         type="search"
@@ -167,6 +146,16 @@ const ConversationsList = (props: ConversationsListProps) => {
         </Show>
         <Show when={isBatchDeleteMode()}>
           <div class="flex items-center gap-2">
+            <Show when={selectedSessionIds().size > 0}>
+              <button
+                type="button"
+                class="inline-flex items-center justify-center rounded-md border border-red-700 bg-red-900 px-2 py-1 text-xs font-medium text-red-300 transition hover:border-red-600 hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:cursor-progress disabled:opacity-60"
+                onclick={() => void handleBatchDelete(Array.from(selectedSessionIds()))}
+                disabled={isLoading()}
+              >
+                Delete Selected ({selectedSessionIds().size})
+              </button>
+            </Show>
             <button
               type="button"
               class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-progress disabled:opacity-60"
